@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>一盏塔罗 · 抽一张牌</title>
+<meta name="description" content="静下心,抽一张塔罗牌。每日一牌与三牌占卜,即抽即解。仅供娱乐参考。">
+<style>
+:root{
+  --bg:#12101f; --bg2:#1a1730; --panel:#211d3a;
+  --gold:#d9b36c; --gold-dim:#9d8352; --gold-line:rgba(217,179,108,.45);
+  --ink:#efeaf7; --muted:#9d94b8; --rose:#c98aa0; --teal:#8fd0c2;
+  --serif:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--serif);
+  background-image:radial-gradient(circle at 20% 15%, rgba(90,70,150,.18), transparent 40%),
+                   radial-gradient(circle at 80% 85%, rgba(60,90,140,.14), transparent 45%);
+  min-height:100%;
+}
+#app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:0 20px 40px}
+.screen{display:none;flex:1;flex-direction:column;animation:fade .5s ease}
+.screen.on{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+
+header{padding:26px 0 6px;text-align:center}
+.brand{font-size:14px;letter-spacing:.5em;color:var(--gold-dim);text-indent:.5em}
+h1{font-size:26px;font-weight:500;letter-spacing:.12em;margin-top:8px}
+.sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.8}
+.hr{width:56px;height:1px;background:var(--gold-line);margin:18px auto}
+
+.entry{margin-top:26px;display:flex;flex-direction:column;gap:16px}
+.entry-card{
+  border:1px solid var(--gold-line);border-radius:14px;padding:20px 22px;
+  background:linear-gradient(160deg, rgba(217,179,108,.06), rgba(255,255,255,0) 60%);
+  cursor:pointer;transition:transform .2s, border-color .2s;
+}
+.entry-card:active{transform:scale(.98)}
+.entry-card h2{font-size:19px;font-weight:500;letter-spacing:.08em;color:var(--gold)}
+.entry-card p{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.8}
+footer{margin-top:auto;padding-top:30px;text-align:center;color:#5f5880;font-size:11px;letter-spacing:.15em}
+
+.q-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.q-tag{border:1px solid #3d3763;color:var(--muted);border-radius:999px;padding:7px 16px;font-size:13px;cursor:pointer}
+.q-tag.sel{border-color:var(--gold);color:var(--gold)}
+textarea{
+  width:100%;margin-top:18px;background:var(--bg2);border:1px solid #3d3763;border-radius:12px;
+  color:var(--ink);font-family:var(--serif);font-size:15px;line-height:1.8;padding:14px;height:96px;resize:none;
+}
+textarea:focus{outline:none;border-color:var(--gold-dim)}
+.hint{color:#6c6590;font-size:12px;margin-top:10px;line-height:1.8}
+
+.btn{
+  display:block;width:100%;margin-top:22px;padding:15px;border-radius:999px;border:1px solid var(--gold);
+  background:transparent;color:var(--gold);font-family:var(--serif);font-size:16px;letter-spacing:.3em;text-indent:.3em;
+  cursor:pointer;transition:background .2s;
+}
+.btn:active{background:rgba(217,179,108,.12)}
+.btn.solid{background:var(--gold);color:#241c0c;font-weight:500}
+.btn.ghost{border-color:#3d3763;color:var(--muted);letter-spacing:.15em;text-indent:.15em}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.back{align-self:flex-start;margin-top:18px;color:#6c6590;font-size:13px;background:none;border:none;font-family:var(--serif);cursor:pointer}
+
+.stage-title{text-align:center;margin-top:34px}
+.stage-title h2{font-size:20px;font-weight:500;letter-spacing:.2em}
+.stage-title p{color:var(--muted);font-size:13px;margin-top:10px;line-height:1.9}
+
+.cardback{
+  background:
+    radial-gradient(circle at 50% 42%, rgba(217,179,108,.35) 0 2px, transparent 3px),
+    repeating-radial-gradient(circle at 50% 42%, transparent 0 7px, rgba(217,179,108,.12) 7px 8px),
+    linear-gradient(160deg,#241f44,#171331);
+  border:1px solid var(--gold-line);border-radius:9px;position:relative;
+}
+.cardback::after{content:"✦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:15px}
+
+#shufflezone{position:relative;height:320px;margin-top:26px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px}
+.deck{position:relative;width:96px;height:150px}
+.deck::before{content:"";position:absolute;inset:-18px;border-radius:16px;border:1px solid rgba(217,179,108,.35);animation:halo 2s ease-in-out infinite}
+@keyframes halo{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.07);opacity:.85}}
+.sh-base,.sh-fly{position:absolute;inset:0}
+.sh-base.b1{transform:rotate(-3deg) translate(-3px,2px)}
+.sh-base.b2{transform:rotate(2deg) translate(3px,-1px)}
+.sh-fly.f1{animation:shufR 1.5s ease-in-out infinite}
+.sh-fly.f2{animation:shufL 1.9s ease-in-out infinite .4s}
+@keyframes shufR{0%,100%{transform:none;z-index:1}25%{transform:translateX(74px) rotate(9deg)}55%{transform:translateX(74px) translateY(8px) rotate(9deg);z-index:6}80%{transform:translate(2px,3px);z-index:6}}
+@keyframes shufL{0%,100%{transform:none;z-index:2}25%{transform:translateX(-74px) rotate(-8deg)}55%{transform:translateX(-74px) translateY(-6px) rotate(-8deg);z-index:7}80%{transform:translate(-2px,-2px);z-index:7}}
+.tapcue{
+  display:inline-flex;align-items:center;gap:10px;border:1px solid var(--gold);color:var(--gold);
+  border-radius:999px;padding:11px 26px;font-size:14px;letter-spacing:.2em;position:relative;
+  animation:cue 1.6s ease-in-out infinite;
+}
+.tapcue::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gold);animation:cuedot 1.6s ease-in-out infinite}
+@keyframes cue{0%,100%{box-shadow:0 0 0 0 rgba(217,179,108,.35)}50%{box-shadow:0 0 0 9px rgba(217,179,108,0)}}
+@keyframes cuedot{0%,100%{opacity:.4}50%{opacity:1}}
+#shufflezone.stopped .sh-fly{animation:none}
+#shufflezone.stopped .deck::before{animation:none;opacity:.9;border-color:var(--gold)}
+#shufflezone.stopped .tapcue{visibility:hidden}
+
+#fanwrap{margin-top:26px;overflow-x:auto;padding:26px 10px 18px;-webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 26px,#000 calc(100% - 26px),transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
+#fan{display:flex;height:136px;padding-right:34px}
+.fan-card{width:62px;height:100px;margin-right:-34px;flex:0 0 auto;transition:transform .22s;cursor:pointer;position:relative}
+.fan-card.preview{transform:translateY(-14px)}
+.fan-card.picked{transform:translateY(-24px);border-color:var(--gold)}
+.fan-card.picked::before{content:"";position:absolute;inset:-3px;border:1px solid var(--gold);border-radius:11px}
+.pickinfo{text-align:center;color:var(--gold);font-size:14px;letter-spacing:.2em;margin-top:8px;min-height:22px}
+
+#spread{display:flex;justify-content:center;gap:14px;margin-top:34px}
+.slot{text-align:center}
+.slot .pos{color:var(--muted);font-size:12px;letter-spacing:.2em;margin-bottom:10px}
+.flip{width:96px;height:154px;perspective:900px;cursor:pointer}
+.flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s}
+.flip.on .flip-inner{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:9px}
+.face-front{transform:rotateY(180deg)}
+.tcard{
+  width:100%;height:100%;border:1px solid var(--gold-line);border-radius:9px;background:linear-gradient(170deg,#262148,#191536);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:9px 6px;position:relative;
+}
+.tcard::before{content:"";position:absolute;inset:4px;border:1px solid rgba(217,179,108,.25);border-radius:6px;z-index:3;pointer-events:none}
+.tcard .num{font-size:11px;color:var(--gold-dim);letter-spacing:.08em}
+.tcard .glyph{font-size:30px;color:var(--gold)}
+.tcard .nm{font-size:12px;color:var(--ink);letter-spacing:.1em;text-align:center}
+.tcard.rev{transform:rotate(180deg)}
+.imgcard{padding:0}
+.imgcard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;z-index:1;
+  filter:saturate(.88) contrast(1.04) brightness(.96)}
+.imgcard::after{content:"";position:absolute;inset:0;border-radius:8px;z-index:2;pointer-events:none;
+  box-shadow:inset 0 0 24px rgba(18,16,31,.55);
+  background:linear-gradient(180deg,rgba(18,14,38,.14),rgba(18,14,38,0) 30%,rgba(18,14,38,.05) 70%,rgba(18,14,38,.2))}
+.imgcard .inm{position:absolute;left:0;right:0;bottom:0;z-index:4;text-align:center;font-size:11px;letter-spacing:.15em;
+  color:var(--ink);padding:16px 4px 6px;border-radius:0 0 8px 8px;
+  background:linear-gradient(180deg,transparent,rgba(10,8,20,.8))}
+.imgcard .num,.imgcard .glyph,.imgcard .nm{display:none}
+.imgcard.noimg{padding:9px 6px}
+.imgcard.noimg .num,.imgcard.noimg .nm{display:block}
+.imgcard.noimg .glyph{display:flex}
+.imgcard.noimg .inm{display:none}
+.flipcap{margin-top:10px;font-size:12px;min-height:34px;line-height:1.5}
+.flipcap .o-up{color:var(--teal)}
+.flipcap .o-rev{color:var(--rose)}
+
+#result{padding-bottom:10px}
+.r-q{margin-top:30px;text-align:center;color:var(--muted);font-size:13px;line-height:1.9}
+.r-q b{color:var(--ink);font-weight:500;font-size:15px;display:block;margin-top:6px}
+.r-cards{display:flex;justify-content:center;gap:10px;margin-top:22px}
+.r-cards .mini{transform:scale(.72);transform-origin:top center;margin-bottom:-40px}
+.r-block{border:1px solid #322c58;border-radius:14px;padding:18px;margin-top:16px;background:rgba(33,29,58,.55)}
+.r-block .rb-pos{font-size:12px;color:var(--gold-dim);letter-spacing:.25em}
+.r-block h3{font-size:17px;font-weight:500;margin-top:6px}
+.r-block h3 .ori{font-size:12px;margin-left:8px}
+.ori.up{color:var(--teal)} .ori.rev{color:var(--rose)}
+.kw{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.kw span{font-size:11px;color:var(--muted);border:1px solid #3d3763;border-radius:999px;padding:3px 10px}
+.r-block p{margin-top:12px;font-size:14px;line-height:2;color:#d8d2e8}
+.r-sum{border-color:var(--gold-line);background:linear-gradient(160deg, rgba(217,179,108,.07), rgba(33,29,58,.5))}
+.r-sum .rb-pos{color:var(--gold)}
+.disclaim{text-align:center;color:#5f5880;font-size:11px;margin-top:22px;letter-spacing:.1em;line-height:1.8}
+#shareimg{width:100%;border-radius:12px;margin-top:16px;display:none}
+.toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#2c2650;border:1px solid var(--gold-line);color:var(--ink);font-size:13px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+<section class="screen on" id="s-home">
+  <header>
+    <div class="brand">一盏塔罗</div>
+    <h1>静下心,抽一张牌</h1>
+    <div class="hr"></div>
+    <p class="sub">在洗牌与翻牌之间,<br>听一听自己内心早已知道的答案。</p>
+  </header>
+  <div class="entry">
+    <div class="entry-card" onclick="startDaily()">
+      <h2>每日一牌</h2>
+      <p>无需提问,抽一张牌,作为今天的指引与提醒。</p>
+    </div>
+    <div class="entry-card" onclick="show('s-ask')">
+      <h2>三牌占卜 · 过去 现在 未来</h2>
+      <p>带着一个具体的问题,看三张牌为你梳理来路、当下与去向。</p>
+    </div>
+  </div>
+  <footer>仅供娱乐参考 · 命运始终在你自己手中</footer>
+</section>
+
+<section class="screen" id="s-ask">
+  <button class="back" onclick="show('s-home')">← 返回</button>
+  <div class="stage-title">
+    <h2>你想问什么</h2>
+    <p>问题越具体,解读越有方向。<br>先选一个方向,或直接写下你的问题。</p>
+  </div>
+  <div class="q-tags" id="qtags"></div>
+  <textarea id="qinput" placeholder="例如:我和 TA 的关系接下来会如何发展?"></textarea>
+  <p class="hint">小提示:比起"会不会",塔罗更擅长回答"是什么样"和"该怎么做"。</p>
+  <button class="btn solid" onclick="startAsk()">带着问题,开始洗牌</button>
+</section>
+
+<section class="screen" id="s-shuffle">
+  <button class="back" onclick="backFromShuffle()">← 返回</button>
+  <div class="stage-title">
+    <h2>洗牌中</h2>
+    <p id="sh-tip">闭上眼,在心中默念你的问题。<br>当你觉得"就是现在",点击牌堆停止洗牌。</p>
+  </div>
+  <div id="shufflezone" onclick="stopShuffle(event)">
+    <div class="deck">
+      <div class="sh-base cardback b1"></div>
+      <div class="sh-base cardback b2"></div>
+      <div class="sh-fly cardback f1"></div>
+      <div class="sh-fly cardback f2"></div>
+      <div class="sh-base cardback"></div>
+    </div>
+    <div class="tapcue">轻点牌堆 · 停止洗牌</div>
+  </div>
+</section>
+
+<section class="screen" id="s-pick">
+  <button class="back" onclick="reShuffle()">← 重新洗牌</button>
+  <div class="stage-title">
+    <h2>凭直觉选牌</h2>
+    <p>左右滑动牌堆,轻点一张牌抬起预览,<br>再点一次,确认选中它。</p>
+  </div>
+  <div id="fanwrap"><div id="fan"></div></div>
+  <div class="pickinfo" id="pickinfo"></div>
+</section>
+
+<section class="screen" id="s-reveal">
+  <button class="back" onclick="reShuffle()">← 重新洗牌</button>
+  <div class="stage-title">
+    <h2>翻开你的牌</h2>
+    <p>逐张轻点,揭示牌面。</p>
+  </div>
+  <div id="spread"></div>
+  <button class="btn solid" id="btn-result" style="display:none" onclick="goResult()">查看解读</button>
+</section>
+
+<section class="screen" id="s-result">
+  <div id="result"></div>
+  <button class="btn solid" onclick="makeShareImage()">生成分享图</button>
+  <img id="shareimg" alt="占卜结果分享图">
+  <p class="hint" id="saveTip" style="display:none;text-align:center">长按上方图片即可保存分享</p>
+  <button class="btn ghost" onclick="copyLink()">复制结果链接</button>
+  <button class="btn ghost" id="btn-again" onclick="resetAll()">再抽一次</button>
+  <button class="btn ghost" id="btn-alt" style="display:none">想问得更具体?试试三牌占卜</button>
+  <p class="disclaim">塔罗呈现的是心的镜像,不是既定的剧本。<br>本内容仅供娱乐与自我探索参考。</p>
+</section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 牌义库 v1(静态) =================
+   结构即数据资产:v2 接 AI 时,这份库将作为知识底料注入 prompt。 */
+const MAJ=[
+["0","愚者","新开始/冒险/纯真","鲁莽/停滞/畏惧","一段旅程正在开启,带着未知与可能,勇敢迈出第一步。","冲动或犹豫都在拖住你,先看清脚下,再决定出发。"],
+["I","魔术师","创造/行动力/资源整合","空谈/欺瞒/力不从心","你手上已握有所需的资源,现在是主动创造的时机。","想法很多但落地不足,也要警惕华而不实的承诺。"],
+["II","女祭司","直觉/潜意识/静观","忽视直觉/秘密/迷茫","答案在你心里,安静下来,倾听直觉的声音。","你在回避内心早已知道的答案,信息也许被隐瞒了。"],
+["III","皇后","丰盛/滋养/创造力","依赖/停滞/过度付出","你正处于被滋养的丰盛期,享受创造与关怀带来的成果。","付出与索取失了衡,先照顾好自己,再照顾世界。"],
+["IV","皇帝","秩序/掌控/责任","专制/僵化/失控","建立规则与结构会带来稳定,承担起主导的责任。","控制过度或权威受挫,规则正在变成束缚。"],
+["V","教皇","传统/指导/信念","教条/反叛/形式化","遵循成熟的路径,或寻求一位导师,会得到可靠的指引。","旧有的规范未必适合你,允许自己走一条非常规的路。"],
+["VI","恋人","结合/选择/价值契合","失衡/诱惑/错位","一段深度连结正在形成,选择与你价值观一致的方向。","关系或选择出现分歧,别为了迎合而背离自己。"],
+["VII","战车","意志/前进/胜利","失控/方向不明/受阻","凭借意志力与专注,你能驾驭局面,高速前进。","动力与方向在打架,先停下来校准,再全力冲刺。"],
+["VIII","力量","勇气/温柔的坚持/自控","自我怀疑/急躁/软弱","以柔克刚。耐心与内在的勇气,会驯服眼前的困难。","信心正在动摇。别用蛮力,先安抚内心的躁动。"],
+["IX","隐士","内省/独处/寻找答案","孤立/逃避/过度封闭","退一步独处思考,你要找的答案需要安静的空间。","独处变成了逃避,是时候重新与世界连接了。"],
+["X","命运之轮","转机/周期/机遇","逆流/时机未到/循环","命运的齿轮正在转动,顺势而为,抓住这次转机。","你正处于周期的低谷。别硬撑,等待下一次上行。"],
+["XI","正义","公正/因果/权衡","失衡/偏颇/回避责任","凡事有因果。理性权衡后做出的决定,经得起检验。","存在不公或自我欺骗,诚实面对才能解开僵局。"],
+["XII","倒吊人","换位/暂停/必要的牺牲","徒劳/拖延/受困","暂停不是损失。换个角度看,僵局自有出口。","无谓的牺牲和等待该结束了,主动做出改变。"],
+["XIII","死神","结束/转化/新生","抗拒改变/拖延/停滞","某个阶段正在自然终结。放手,才能迎来新生。","你在抗拒一场必然的改变,越拖,消耗越大。"],
+["XIV","节制","平衡/调和/耐心","极端/失调/急躁","在两端之间寻找中道,耐心调和会带来流动的和谐。","生活节奏或情绪失了衡,先把过度的那部分收回来。"],
+["XV","恶魔","欲望/束缚/执念","觉醒/挣脱/直面阴影","你可能被欲望或惯性捆绑而不自知。看清那条锁链。","你正在挣脱某种束缚,这是重获自由的开始。"],
+["XVI","高塔","剧变/崩塌/真相","余震/侥幸/延迟的危机","旧结构的崩塌来得突然,但它清出了重建的地基。","危机被暂时掩盖了。主动拆解,好过被动崩塌。"],
+["XVII","星星","希望/疗愈/愿景","迷失/信心不足/幻灭","黑暗过后的疗愈期。心怀希望,你的方向是对的。","暂时看不到光。先降低期待,慢慢恢复能量。"],
+["XVIII","月亮","不安/幻象/潜流","拨云见月/真相浮现/释怀","情绪与直觉在涌动,眼前的景象未必是全貌。","迷雾正在散去,不安的源头即将水落石出。"],
+["XIX","太阳","成功/活力/明朗","过度乐观/延迟的喜悦/倦怠","事情走向明朗。尽情享受这份成功与温暖。","好结果会到,只是慢一点。也别盲目乐观。"],
+["XX","审判","觉醒/复盘/召唤","自我批判/错过召唤/悬而未决","过去的经历在召唤一次总结。回应它,然后重生。","别困在过去的审判里。宽恕自己,才能翻页。"],
+["XXI","世界","圆满/完成/整合","未竟/差一步/循环未闭合","一个循环圆满完成。值得庆祝,新的舞台已经备好。","距离完成只差最后一步,别在终点前松劲。"]
+];
+const RANKS=["A","二","三","四","五","六","七","八","九","十","侍从","骑士","王后","国王"];
+const SUITS=[
+{n:"权杖",g:"杖",theme:"行动与热情",cards:[
+["灵感/新机会/干劲","延迟/热情熄灭/假动作","一股新的热情或机会被点燃,趁热,立即行动。","计划受阻,但火种还在,别让它彻底熄灭。"],
+["规划/远见/抉择","犹豫/格局受限/不敢想","你站在起点眺望远方,是大胆规划下一步的时候。","你被困在舒适区里,视野被自己限制住了。"],
+["进展/扩张/等待成果","延误/计划受挫/短视","前期的投入开始显现进展,继续向外拓展。","进度不如预期,调整策略,再给它一点时间。"],
+["庆祝/稳定/阶段成果","根基不稳/貌合神离","一个阶段性的圆满,值得庆祝,也值得享受安稳。","表面的和谐之下有松动,先回头加固根基。"],
+["竞争/摩擦/意见交锋","化解冲突/无谓内耗","良性的竞争与碰撞,在摩擦中互相磨合。","无谓的内耗该停了,把力气用到对的地方。"],
+["胜利/认可/凯旋","虚名/认可延迟/失落","你的努力获得了认可,享受属于你的高光时刻。","掌声还没有来,或者来的并不是你想要的那种。"],
+["坚守/防御/捍卫立场","疲于应对/考虑退让","守住你的位置。压力越大,越要站稳。","防线快撑不住了,先评估这一仗是否值得死守。"],
+["快速进展/消息将至/顺流","混乱/延迟/仓促行事","事情正在加速推进,消息将至,保持敏捷。","太多事情同时飞来,先排好优先级再动手。"],
+["坚持/警惕/最后一搏","心力交瘁/戒备过度","你已经走了很远,再坚持一下,就快到了。","过度的防备正在消耗你,试着放下一点戒心。"],
+["重担/责任/超负荷","卸下负担/学会分担","你背负了太多。成功在望,但要学会取舍。","是时候放下那些本不属于你的担子了。"],
+["探索/热情萌芽/好消息","三分钟热度/坏消息","新的兴趣或消息带来兴奋,值得大胆一试。","热情来得快去得也快,行动前先想清楚。"],
+["冲劲/冒险/说走就走","鲁莽/半途而废","带着热血出发吧,行动力就是你现在最大的优势。","冲动行事容易翻车,出发前先系好安全带。"],
+["自信/魅力/感染力","锋芒伤人/自我怀疑","以自信与热情感染周围的人,做发光的自己。","自信在摇摆,或锋芒伤了人。找回你的从容。"],
+["领导/远见/魄力","独断/傲慢","以远见和魄力掌舵,你有能力带动全局。","别让强势盖过倾听,独断专行会失去人心。"]]},
+{n:"圣杯",g:"杯",theme:"情感与关系",cards:[
+["新感情/心动/情感涌现","情感压抑/所托非人","一份新的情感或灵感涌上心头,敞开去接受它。","情绪被压抑,或付出没有回应。先善待自己。"],
+["相互吸引/伙伴/和解","失衡/误解","一段彼此对等、互相看见的连结正在建立。","关系的天平倾斜了,需要一次坦诚的沟通。"],
+["欢聚/友谊/共同庆祝","过度社交/圈中是非","与同伴共享喜悦,人际关系正在滋养你。","热闹背后藏着空虚或口舌,适度抽离一下。"],
+["倦怠/无感/审视内心","走出低潮/重新接纳","你对眼前的一切提不起劲。留意那个被忽略的机会。","冷淡期接近尾声,重新对世界产生好奇。"],
+["失落/遗憾/沉溺过去","释怀/看见剩下的","你沉浸在失去的部分里,但你并非一无所有。","你开始放下遗憾。转过身,还有两杯是满的。"],
+["怀旧/纯真/旧人旧事","困于过去/该长大了","旧回忆带来温暖,或许会有故人故事重现。","别用过去的滤镜看现在,该向前走了。"],
+["幻想/选择过多/迷惑","清醒/做出取舍","选项很多,但多数是泡影。擦亮眼睛再选。","幻象散去,你终于知道自己真正要的是什么。"],
+["转身离开/寻找意义","徘徊/不敢离开","放下已经不能满足你的东西,去寻找更深的意义。","明知该走却迈不开步。问问自己,在怕什么。"],
+["满足/愿望达成/享受","自满/表面的快乐","愿望正在接近实现,尽情享受这份满足。","表面的满足填不了内心,该向内看看了。"],
+["圆满/归属/家庭幸福","表面和睦/价值分歧","情感与归属的圆满时刻,好好珍惜眼前人。","和睦之下有未说出口的分歧,坦诚以待。"],
+["好感/直觉讯息/浪漫萌芽","情绪化/幼稚","一份心意,或一条来自直觉的讯息,悄然而至。","情绪牵着你走。别把一时的敏感当成事实。"],
+["追求/表白/浪漫行动","空头支票/情绪反复","一份浪漫的邀请正在靠近,或者,该由你主动了。","承诺很动听,但要看行动。别被氛围冲昏头。"],
+["共情/温柔/情绪成熟","共情过载/讨好","以温柔与共情连接他人,你的直觉此刻可信。","共情过了头就是内耗,给自己立好边界。"],
+["情绪稳定/包容/以柔驭刚","情感操控/压抑","在波澜中保持稳定,你是可靠的依靠。","表面的平静下暗流涌动,诚实面对情绪。"]]},
+{n:"宝剑",g:"剑",theme:"思维与挑战",cards:[
+["洞察/真相/突破","混乱/误判","思路豁然开朗,用清晰的头脑切开眼前的迷局。","思绪打了结,或被信息误导。先别急着下结论。"],
+["僵持/回避抉择/权衡","被迫摊牌/打破僵局","你在两难中蒙眼僵持,但逃避不是答案。","僵局即将被打破,准备好面对那个选择。"],
+["心碎/伤痛/刺痛的真相","疗愈/走出伤痛","一次刺痛的打击或真相。允许自己难过一阵子。","伤口开始结痂。原谅,是给自己的礼物。"],
+["休整/暂停/恢复","重新出发/休而不息","这是强制休息的信号。养精蓄锐,再战不迟。","休整期结束了——或者,你根本没让自己真正休息。"],
+["冲突/胜之不武/代价","和解/及时止损","赢了争执可能输了关系,掂量一下代价。","从消耗性的争斗中抽身,及时止损是种智慧。"],
+["过渡/驶离风暴/好转","遗留问题/难以前行","你正在驶离风暴。虽有不舍,但方向是对的。","行李里还装着过去。清理干净,才能真正离开。"],
+["策略/迂回/隐瞒","败露/坦白","有人在走捷径,或有所隐瞒。多留一个心眼。","秘密快藏不住了。主动坦白,好过被动揭穿。"],
+["受困/自我设限/无力感","松绑/看见出口","困住你的绳索,多半来自想象。眼罩是可以摘下的。","限制正在松动,你比自己以为的更自由。"],
+["焦虑/失眠/内心恐惧","走出梦魇/说出来","深夜的担忧被放大了。恐惧的事大多不会发生。","焦虑开始退潮。把担忧说出来,会好得更快。"],
+["谷底/结束/背叛感","触底反弹/最坏已过","一次沉重的终结。但黎明,恰恰从背后升起。","最坏的已经过去,剩下的路都是向上的。"],
+["好奇/观察/新想法","流言/急于表态","保持好奇与警觉,先观察,再发言。","小道消息满天飞,别急着站队。"],
+["果断/直取目标/雷厉风行","冲动/咄咄逼人","认准目标就全速推进,不要拖泥带水。","太快太猛,容易伤人伤己。收一收锋芒。"],
+["清醒/独立/一针见血","刻薄/情感隔离","用理性和界限保护自己,你此刻的判断可信。","锋利过头会冻伤人。理性,也需要温度。"],
+["权威/逻辑/公正决断","滥用理性/冷酷","以逻辑和原则做决断,专业的意见值得一听。","别让规则压过人情。冰冷的正确,也是一种错。"]]},
+{n:"星币",g:"币",theme:"现实与积累",cards:[
+["务实的新机会/种子","机会流失/贪多","一个实实在在的机会落到手上,好好栽培它。","机会正从指缝溜走。检查一下,是否想要得太多。"],
+["多线平衡/灵活周转","顾此失彼/失衡","你在多头事务间灵活起舞,记得量力而行。","球快接不住了。砍掉一些,再继续。"],
+["协作/手艺被认可","单打独斗/敷衍","你的能力被看见了,与他人协作会放大成果。","配合出了问题,或者,你正在应付了事。"],
+["守成/储蓄/掌控资源","吝啬/抓得太紧","守住已有的成果,稳健是当下最好的策略。","抓得太紧,反而失去流动。适度放一放手。"],
+["匮乏/困顿/被排除在外","转机/接受帮助","你正经历物质或心理上的寒冬。其实门就在旁边。","困境开始松动了,别拒绝那只伸过来的手。"],
+["给予与接受/资源流动","附带条件/施受失衡","资源在流动。慷慨与求助,都是一种智慧。","小心带条件的给予,重新平衡付出与回报。"],
+["耐心等待/评估/长线","回报不及预期/想放弃","种下的还没成熟。评估之后,继续深耕。","投入与产出失衡了,也许该考虑换一块地。"],
+["精进/专注打磨/学习","机械重复/敷衍","沉下心打磨技艺,量变正在悄悄积累。","重复而没有精进。给你的练习加一点难度。"],
+["独立富足/自律的果实","依赖外物/挥霍","凭自己挣来的丰盛,独立而优雅,好好享受。","富足感依赖于外物。回到自律这个根基上来。"],
+["家业/长期财富/传承","家事财务纠纷/根基动摇","长期的积累开花结果,并惠及你身边的人。","涉及家庭与金钱的议题,需要格外谨慎处理。"],
+["学习机会/务实起步","拖延/眼高手低","一个值得投入学习的机会出现了,从小事做起。","计划停在纸面上。先完成,再完美。"],
+["踏实/稳步推进/可靠","停滞/过度保守","慢,但是稳。日拱一卒,终会抵达。","稳变成了停。给一成不变的日常加点新变量。"],
+["务实的照顾/安稳有序","忙到失衡/物质焦虑","你能把生活打理得温暖有序,兼顾现实与关怀。","照顾了所有人,却忘了自己。重新分配精力。"],
+["事业有成/稳健掌舵","固执/唯利是图","以稳健与实力掌控局面,你的财富观正在成熟。","别让安全感变成固执,钱不是唯一的标尺。"]]}
+];
+
+/* 构建 78 张牌 */
+const DECK78=[];
+MAJ.forEach((m,i)=>DECK78.push({id:i,num:m[0],name:m[1],glyph:"★",ku:m[2].split("/"),kr:m[3].split("/"),mu:m[4],mr:m[5],major:true}));
+SUITS.forEach((s,si)=>s.cards.forEach((c,ri)=>DECK78.push({
+  id:22+si*14+ri,num:RANKS[ri],name:s.n+RANKS[ri],glyph:s.g,suit:si,
+  ku:c[0].split("/"),kr:c[1].split("/"),mu:c[2],mr:c[3],major:false
+})));
+
+/* ============ 语境化:问题分类 → 领域落点话术 ============ */
+const CATS={
+"感情关系":{m:"放在感情里,这是一张分量很重的牌,指向关系层面的关键转折。",w:"对应到感情,它谈的是主动、热度与吸引力。",c:"它落在感情最核心的部分——情感的流动与回应。",s:"对应到感情,它指向沟通、想法与心结。",p:"对应到感情,它谈的是安全感与关系中的现实问题。"},
+"事业发展":{m:"放在事业上,这是一张影响格局的关键牌。",w:"对应到事业,它谈的是行动力、进取与竞争。",c:"对应到事业,它提醒你关注工作中的感受与人和。",s:"对应到事业,它指向决策、沟通与压力。",p:"对应到事业,它落在实际成果、报酬与积累上。"},
+"学业成长":{m:"放在学业上,这一牌指向阶段性的重要节点。",w:"对应到学业,它谈的是动力与投入度。",c:"对应到学业,它提醒你关注状态与心态。",s:"对应到学业,它指向方法、思路与考验。",p:"对应到学业,它谈的是积累与踏实的功夫。"},
+"财务状况":{m:"在财务议题上,这是一张指向大势的牌。",w:"对应到财务,它谈的是开拓与新的机会。",c:"对应到财务,它提醒你别让情绪主导金钱决定。",s:"对应到财务,它指向判断、风险与信息差。",p:"它正落在财务的本命领域——积累与打理。"},
+"人际相处":{m:"放在人际里,这一牌指向关系格局的变化。",w:"对应到人际,它谈的是主动与边界。",c:"它落在人际的核心——情感的给与受。",s:"对应到人际,它指向沟通方式与可能的误解。",p:"对应到人际,它谈的是可靠与互惠。"},
+"一个抉择":{m:"面对抉择,这张大牌本身就是方向性的提示。",w:"放在这个抉择上,它偏向「去做」那一边的考量。",c:"放在这个抉择上,它提醒你听听心的偏向。",s:"放在这个抉择上,它要求你把利弊想得更清楚。",p:"放在这个抉择上,它把你拉回现实条件的盘点。"}
+};
+function detectCat(q){
+  if(/感情|恋|爱|喜欢|暧昧|他|她|TA|对象|分手|复合|婚/.test(q))return"感情关系";
+  if(/工作|事业|职|老板|跳槽|升|同事.*项目|创业|offer/i.test(q))return"事业发展";
+  if(/学|考|论文|成绩|专业/.test(q))return"学业成长";
+  if(/钱|财|收入|投资|买|债/.test(q))return"财务状况";
+  if(/朋友|同事|室友|家人|人际|相处|矛盾|闹翻|合不来|关系/.test(q))return"人际相处";
+  if(/还是|选|抉择|决定|要不要|该不该/.test(q))return"一个抉择";
+  return null;
+}
+const ENDINGS=[
+"记住:牌描绘的是此刻的风向,而握着帆的,始终是你。",
+"塔罗给出的是提示,不是判决。真正的答案,在你接下来的选择里。",
+"把这次抽牌当作一面镜子——它照见的,是你其实早已隐约知道的事。",
+"牌面会变,人心会动。带着这份觉察去生活,比记住结论更重要。",
+"愿这几张牌,成为你今天做决定时,多出来的那一点点笃定。",
+"风向已经看过了。接下来,轮到你掌舵。"
+];
+function domainLine(card,cat){
+  if(!cat||!CATS[cat])return"";
+  return CATS[cat][card.major?"m":["w","c","s","p"][card.suit]];
+}
+
+/* ============ 可复现随机:mulberry32 ============ */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ============ 解读器抽象层 ============
+   v2 接 AI:把 interpret 的实现换成 fetch('/api/interpret', {question, cards...}),
+   失败时 fallback 回 staticInterpret。UI 层无需任何改动。 */
+const Interpreter={
+  async interpret(s){ return this.staticInterpret(s); },
+  staticInterpret(s){
+    const blocks=s.cards.map((c,i)=>({
+      pos:s.type===1?"今日指引":["过去 · 来路","现在 · 核心","未来 · 走向"][i],
+      lead:s.type===1?"这张牌是今天送给你的提醒":["这张牌揭示了事情的根源与来路","这张牌照见你当下的核心状态","这张牌指向趋势与可能的走向"][i],
+      card:c.card, rev:c.rev,
+      kws:c.rev?c.card.kr:c.card.ku,
+      text:(c.rev?c.card.mr:c.card.mu)+(s.cat?domainLine(c.card,s.cat):"")
+    }));
+    return {blocks, summary:this.synthesize(s)};
+  },
+  synthesize(s){
+    const cs=s.cards, n=cs.length;
+    const majors=cs.filter(c=>c.card.major).length;
+    const revs=cs.filter(c=>c.rev).length;
+    let out=[];
+    if(n===1){
+      const c=cs[0];
+      out.push(c.rev?
+        "今天的牌以逆位出现,它不是坏消息,而是一个温柔的提醒:留意"+c.card.kr[0]+"的倾向,把它当作今天自我观察的功课。":
+        "今天的能量关键词是「"+c.card.ku[0]+"」。把它放进心里,遇到犹豫时,想想这张"+c.card.name+"。");
+    }else{
+      if(s.cat)out.push("围绕你问的「"+s.cat+"」议题来看:");
+      if(majors>=2) out.push("三张牌中出现了"+majors+"张大阿卡纳,说明这件事对你有超出日常的分量,背后有更大的人生课题在推动。");
+      else if(majors===1) out.push("局中有一张大阿卡纳压阵,关键的转折点集中在「"+cs.find(c=>c.card.major).card.name+"」所在的位置上。");
+      else out.push("三张都是小阿卡纳——这件事的走向主要取决于日常中具体的选择与行动,事在人为。");
+      if(revs===0) out.push("全部正位,能量流动整体顺畅,顺着当下的势头走即可。");
+      else if(revs>=2) out.push("逆位偏多,提示存在需要先向内梳理的阻力:与其急着向外求结果,不如先处理牌面点出的那些卡点。");
+      else out.push("其中一张逆位是整组牌的提醒——它所在的位置,正是最需要你调整姿态的地方。");
+      const sc=[0,0,0,0];cs.forEach(c=>{if(!c.card.major)sc[c.card.suit]++});
+      const mx=Math.max(...sc);
+      if(mx>=2) out.push("牌面集中在"+SUITS[sc.indexOf(mx)].n+"上,核心议题落在「"+SUITS[sc.indexOf(mx)].theme+"」这个层面。");
+    }
+    out.push(ENDINGS[(s.seed||0)%ENDINGS.length]);
+    return out.join("");
+  }
+};
+
+/* ============ 会话与流程 ============ */
+let S=null, shuffled=[], orients=[], picks=[], flipped=0, reading=null;
+const $=id=>document.getElementById(id);
+function show(id){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("on"));$(id).classList.add("on");window.scrollTo(0,0)}
+function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");setTimeout(()=>el.classList.remove("on"),1800)}
+
+const PRESETS={"感情关系":"我和TA的关系接下来会如何发展?","事业发展":"我目前的工作接下来会有什么变化?","学业成长":"我近期的学习状态和考试运势如何?","财务状况":"我近期的财务状况会怎样变化?","人际相处":"我该如何处理和身边人的关系?","一个抉择":"关于我正在犹豫的这件事,该怎么选?"};
+let lastTemplate="";
+Object.keys(PRESETS).forEach(p=>{const b=document.createElement("div");b.className="q-tag";b.textContent=p;
+  b.onclick=()=>{document.querySelectorAll(".q-tag").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");
+  const q=$("qinput");if(!q.value.trim()||q.value===lastTemplate){q.value=PRESETS[p];lastTemplate=PRESETS[p]}};$("qtags").appendChild(b)});
+
+function todaySeed(){const d=new Date();return((d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate())*2654435761)>>>0}
+function startDaily(){S={type:1,q:"今日指引",daily:true};$("sh-tip").innerHTML="今天的牌已在命运中备好。<br>深呼吸,点击牌堆,与它相遇。";show("s-shuffle")}
+function startAsk(){
+  const sel=document.querySelector(".q-tag.sel");
+  const q=$("qinput").value.trim()||(sel?PRESETS[sel.textContent]:"");
+  if(!q){toast("先写下或选择一个问题吧");return}
+  S={type:3,q,cat:sel?sel.textContent:detectCat(q)};
+  $("sh-tip").innerHTML="闭上眼,在心中默念你的问题。<br>当你觉得\u201c就是现在\u201d,点击牌堆停止洗牌。";
+  show("s-shuffle");
+}
+function backFromShuffle(){show(S&&S.type===3?"s-ask":"s-home")}
+function reShuffle(){
+  $("sh-tip").innerHTML=S.daily?"今天的牌已在命运中备好。<br>深呼吸,点击牌堆,与它相遇。":"闭上眼,在心中默念你的问题。<br>当你觉得\u201c就是现在\u201d,点击牌堆停止洗牌。";
+  show("s-shuffle");
+}
+function stopShuffle(e){
+  const z=$("shufflezone");if(z.classList.contains("stopped"))return;
+  z.classList.add("stopped");
+  S.seed=(S.daily&&!S.redraw)?todaySeed():((Date.now()^(e.clientX*7919+e.clientY*104729))>>>0);
+  $("sh-tip").textContent="牌已洗好。";
+  setTimeout(()=>{
+    z.classList.remove("stopped");
+    prepareDeck();
+    if(S.daily){const r=rng(S.seed^0x9E37);picks=[Math.floor(r()*78)];goReveal()}
+    else{buildFan();picks=[];previewEl=null;updatePickInfo();show("s-pick")}
+  },750);
+}
+function prepareDeck(){
+  const r=rng(S.seed);
+  shuffled=DECK78.map(c=>c);
+  for(let i=77;i>0;i--){const j=Math.floor(r()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]}
+  orients=shuffled.map(()=>r()<0.38);
+}
+function buildFan(){
+  const f=$("fan");f.innerHTML="";
+  for(let i=0;i<78;i++){
+    const d=document.createElement("div");d.className="fan-card cardback";d.dataset.i=i;
+    d.onclick=()=>pickCard(i,d);f.appendChild(d);
+  }
+  $("fanwrap").scrollLeft=0;
+}
+let previewEl=null;
+function pickCard(i,el){
+  if(picks.includes(i)||picks.length>=S.type)return;
+  if(previewEl!==el){
+    if(previewEl)previewEl.classList.remove("preview");
+    previewEl=el;el.classList.add("preview");
+    $("pickinfo").textContent="再点一次,确认这张牌";
+    return;
+  }
+  el.classList.remove("preview");previewEl=null;
+  picks.push(i);el.classList.add("picked");updatePickInfo();
+  if(picks.length===S.type)setTimeout(goReveal,550);
+}
+function updatePickInfo(){
+  const pos=["第一张 · "+(S.type===1?"今日之牌":"过去"),"第二张 · 现在","第三张 · 未来"];
+  $("pickinfo").textContent=picks.length<S.type?("请选:"+pos[picks.length]):"已选好,准备翻牌…";
+}
+function goReveal(){
+  S.cards=picks.map(i=>({card:shuffled[i],rev:orients[i]}));
+  S.cards.forEach(c=>{const im=new Image();im.src=cardImg(c.card)});
+  renderSpread();flipped=0;$("btn-result").style.display="none";show("s-reveal");
+  history.replaceState(null,"","?"+new URLSearchParams({t:S.type,s:S.seed,p:picks.join("."),q:S.q}).toString());
+}
+/* 韦特1909 图片映射(sacred-texts 命名约定) */
+const RANKF=["ac","02","03","04","05","06","07","08","09","10","pa","kn","qu","ki"];
+const SUITF=["wa","cu","sw","pe"];
+function cardImg(c){
+  return "cards/"+(c.major?("ar"+String(c.id).padStart(2,"0")):(SUITF[c.suit]+RANKF[(c.id-22)%14]))+".webp";
+}
+function cardFaceHTML(c,rev,mini){
+  return '<div class="tcard imgcard'+(rev?" rev":"")+(mini?" mini":"")+'">'+
+  '<img src="'+cardImg(c)+'" alt="'+c.name+'" onerror="this.closest(&quot;.tcard&quot;).classList.add(&quot;noimg&quot;);this.remove()">'+
+  '<div class="num">'+c.num+'</div><div class="glyph">'+c.glyph+'</div><div class="nm">'+c.name+'</div>'+
+  '<div class="inm">'+c.name+'</div></div>';
+}
+function renderSpread(){
+  const sp=$("spread");sp.innerHTML="";
+  const posNames=S.type===1?["今日指引"]:["过去","现在","未来"];
+  S.cards.forEach((c,i)=>{
+    const slot=document.createElement("div");slot.className="slot";
+    slot.innerHTML='<div class="pos">'+posNames[i]+'</div>'+
+      '<div class="flip" id="fl'+i+'"><div class="flip-inner">'+
+      '<div class="flip-face cardback"></div>'+
+      '<div class="flip-face face-front">'+cardFaceHTML(c.card,c.rev)+'</div>'+
+      '</div></div><div class="flipcap" id="cap'+i+'"></div>';
+    sp.appendChild(slot);
+    $("fl"+i).onclick=()=>flip(i);
+  });
+}
+function flip(i){
+  const el=$("fl"+i);if(el.classList.contains("on"))return;
+  el.classList.add("on");
+  const c=S.cards[i];
+  setTimeout(()=>{$("cap"+i).innerHTML=c.card.name+'<br><span class="'+(c.rev?"o-rev":"o-up")+'">'+(c.rev?"逆位":"正位")+'</span>'},420);
+  if(++flipped===S.type)setTimeout(()=>{$("btn-result").style.display="block"},800);
+}
+async function goResult(){
+  reading=await Interpreter.interpret(S);
+  const r=$("result");
+  const d=new Date();
+  const head=S.type===1
+    ?'<div class="r-q">'+(d.getMonth()+1)+'月'+d.getDate()+'日<b>'+(S.redraw?"再抽的一牌":"今日一牌")+'</b></div>'
+    :'<div class="r-q">你问的是<b>'+esc(S.q)+'</b></div>';
+  let h=head+'<div class="r-cards">'+
+    S.cards.map(c=>'<div style="width:96px;height:154px">'+cardFaceHTML(c.card,c.rev)+'</div>').join("")+'</div>';
+  reading.blocks.forEach(b=>{
+    h+='<div class="r-block"><div class="rb-pos">'+b.pos+'</div>'+
+    '<h3>'+b.card.name+'<span class="ori '+(b.rev?"rev":"up")+'">'+(b.rev?"逆位":"正位")+'</span></h3>'+
+    '<div class="kw">'+b.kws.map(k=>"<span>"+k+"</span>").join("")+'</div>'+
+    '<p>'+b.lead+':'+b.text+'</p></div>';
+  });
+  h+='<div class="r-block r-sum"><div class="rb-pos">综合结语</div><p>'+reading.summary+'</p></div>';
+  r.innerHTML=h;$("shareimg").style.display="none";$("saveTip").style.display="none";
+  const again=$("btn-again"),alt=$("btn-alt");
+  if(S.type===1){
+    again.textContent="再抽一次";
+    again.onclick=()=>{S={type:1,q:"今日指引",daily:true,redraw:true};
+      $("sh-tip").innerHTML="想再听一次牌的声音也没关系。<br>默念心中所想,点击牌堆停止洗牌。";show("s-shuffle")};
+    alt.style.display="block";
+    alt.onclick=()=>{history.replaceState(null,"",location.pathname);S=null;show("s-ask")};
+  }else{
+    again.textContent="再抽一次";again.onclick=resetAll;alt.style.display="none";
+  }
+  show("s-result");
+}
+function esc(s){return s.replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]))}
+function resetAll(){history.replaceState(null,"",location.pathname);S=null;$("qinput").value="";
+  document.querySelectorAll(".q-tag").forEach(x=>x.classList.remove("sel"));show("s-home")}
+function copyLink(){
+  navigator.clipboard.writeText(location.href).then(()=>toast("链接已复制,可以分享了"))
+  .catch(()=>toast("复制失败,请手动复制地址栏链接"));
+}
+
+/* ============ 分享图(canvas) ============ */
+function loadImg(src){return new Promise(res=>{const im=new Image();const t=setTimeout(()=>res(null),2500);
+  im.onload=()=>{clearTimeout(t);res(im)};im.onerror=()=>{clearTimeout(t);res(null)};im.src=src})}
+async function makeShareImage(){
+  const W=750,pad=56;const cv=document.createElement("canvas");
+  const imgs=await Promise.all(S.cards.map(c=>loadImg(cardImg(c.card))));
+  const hasImgs=imgs.every(x=>x);
+  const lines=wrapText(reading.summary,26);
+  const n=S.cards.length;
+  const cw=n===1?230:190, ch=Math.round(cw*1.66);
+  const imgRow=hasImgs?ch+70:0;
+  const H=300+imgRow+n*130+lines.length*40+190;
+  cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#1a1730");bg.addColorStop(1,"#12101f");
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  g.strokeStyle="rgba(217,179,108,.5)";g.lineWidth=2;g.strokeRect(24,24,W-48,H-48);
+  g.textAlign="center";g.fillStyle="#9d8352";g.font="26px "+FONT;
+  g.fillText("一 盏 塔 罗",W/2,110);
+  g.fillStyle="#efeaf7";g.font="500 40px "+FONT;
+  wrapText(S.q,15).slice(0,2).forEach((l,i)=>g.fillText(l,W/2,180+i*56));
+  g.strokeStyle="rgba(217,179,108,.4)";g.beginPath();g.moveTo(W/2-40,250);g.lineTo(W/2+40,250);g.stroke();
+  let y=300;
+  if(hasImgs){
+    const gap=30,totalW=n*cw+(n-1)*gap;let x=(W-totalW)/2;
+    S.cards.forEach((c,i)=>{
+      g.save();
+      g.translate(x+cw/2,y+ch/2);
+      if(c.rev)g.rotate(Math.PI);
+      g.drawImage(imgs[i],-cw/2,-ch/2,cw,ch);
+      g.restore();
+      g.strokeStyle="rgba(217,179,108,.6)";g.lineWidth=2;g.strokeRect(x,y,cw,ch);
+      x+=cw+gap;
+    });
+    y+=ch+70;
+  }
+  const posNames=S.type===1?["今日指引"]:["过去","现在","未来"];
+  S.cards.forEach((c,i)=>{
+    g.fillStyle="#9d8352";g.font="24px "+FONT;g.textAlign="left";
+    g.fillText(posNames[i],pad,y);
+    g.fillStyle="#efeaf7";g.font="500 34px "+FONT;
+    g.fillText(c.card.name+"  "+(c.rev?"逆位":"正位"),pad,y+46);
+    g.fillStyle=c.rev?"#c98aa0":"#8fd0c2";g.font="24px "+FONT;
+    g.fillText((c.rev?c.card.kr:c.card.ku).join(" · "),pad,y+88);
+    y+=130;
+  });
+  g.strokeStyle="rgba(217,179,108,.3)";g.beginPath();g.moveTo(pad,y-20);g.lineTo(W-pad,y-20);g.stroke();
+  g.fillStyle="#d8d2e8";g.font="26px "+FONT;y+=30;
+  lines.forEach(l=>{g.fillText(l,pad,y);y+=40});
+  g.textAlign="center";g.fillStyle="#5f5880";g.font="20px "+FONT;
+  g.fillText("仅供娱乐参考 · 长按识别去抽一张你的牌",W/2,H-70);
+  const img=$("shareimg");img.src=cv.toDataURL("image/png");
+  img.style.display="block";$("saveTip").style.display="block";
+  img.scrollIntoView({behavior:"smooth"});
+}
+const FONT='"Noto Serif SC","Songti SC","SimSun",serif';
+function wrapText(t,n){const out=[];let cur="";for(const ch of t){cur+=ch;if(cur.length>=n){out.push(cur);cur=""}}if(cur)out.push(cur);return out}
+
+/* ============ 从链接复现结果 ============ */
+(function tryRestore(){
+  const p=new URLSearchParams(location.search);
+  if(!p.get("s"))return;
+  S={type:+p.get("t")||1,q:p.get("q")||"今日指引",seed:+p.get("s")};
+  S.cat=S.type===3?detectCat(S.q):null;
+  prepareDeck();
+  picks=(p.get("p")||"").split(".").map(Number).filter(x=>x>=0&&x<78).slice(0,S.type);
+  if(picks.length!==S.type){S=null;return}
+  S.cards=picks.map(i=>({card:shuffled[i],rev:orients[i]}));
+  renderSpread();flipped=0;$("btn-result").style.display="none";show("s-reveal");
+})();
+</script>
+</body>
+</html>
